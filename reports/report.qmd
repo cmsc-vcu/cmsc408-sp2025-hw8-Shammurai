@@ -169,14 +169,14 @@ ORDER  BY country_count DESC;
 List the country full names and regions for all countries in North America.
 
 ```{python}
-## Updated: Escape % in LIKE clause to avoid format errors.
+## Updated: Include "The Bermudas" and fix % escape issue.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name` AS country_full_name,
        Region
 FROM wdi_country_clean
 WHERE LOWER(Region) = 'north america'
-   OR LOWER(`Short Name`) LIKE '%%bermuda%%'
-   OR `Short Name` IN ('Canada', 'The Bermudas')
+   OR LOWER(`Short Name`) LIKE '%bermuda%'
+   OR `Short Name` IN ('Canada', 'Bermuda', 'The Bermudas')
 ORDER BY country_full_name;
 """)
 ```
@@ -431,11 +431,10 @@ JOIN totals t;
 
 ## Task 20
 
-```{python}
-## SLAM DUNK TIME!  Using the resulting table CTEs from Task 19,
-## print table similar to the table in Task 15, with Income group in the
-## columns, Region in the rows and Percent of total in each cell of the table.
+Cross Tabulation Percent Table.
 
+```{python}
+## Updated: Ensure 6 columns with percentages for each income group.
 run_sql_and_return_html(cnx,"""
 WITH pct AS (
   SELECT Region,
@@ -448,12 +447,12 @@ SELECT Region,
        SUM(CASE WHEN `Income Group` = 'High income' THEN pct_total ELSE 0 END) AS High_income_pct,
        SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN pct_total ELSE 0 END) AS Upper_middle_income_pct,
        SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN pct_total ELSE 0 END) AS Lower_middle_income_pct,
+       SUM(CASE WHEN `Income Group` = 'Low income' THEN pct_total ELSE 0 END) AS Low_income_pct,
        SUM(CASE WHEN `Income Group` IS NULL OR `Income Group` = '' THEN pct_total ELSE 0 END) AS Other_pct
 FROM   pct
 GROUP  BY Region
 ORDER  BY Region;
 """)
-
 ```
 
 ## Task 21
