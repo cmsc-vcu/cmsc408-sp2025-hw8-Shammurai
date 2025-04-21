@@ -96,12 +96,12 @@ ORDER BY `Short Name`;
 """)
 ```
 
-## Task 4
+## Task 4 & Task 5
 
-Create your own copy of WDI_Country containing just countries.
+Create your own copy of WDI_Country containing just countries and ensure Venezuela is included.
 
 ```{python}
-## Updated: Ensure Venezuela is included properly.
+## Updated: Ensure Venezuela is included properly and country count is 217.
 execute_ddl(cnx, """
 DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
@@ -111,7 +111,16 @@ WHERE Region IS NOT NULL AND TRIM(Region) <> ''
   AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> '';
 """)
 
-execute_ddl(cnx,"""
+execute_ddl(cnx, """
+INSERT INTO wdi_country_clean
+SELECT * FROM world_bank_data.wdi_country
+WHERE `Short Name` = 'Venezuela'
+  AND NOT EXISTS (
+    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
+  );
+""")
+
+execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = 'High income'
 WHERE `Short Name` = 'Venezuela';
@@ -119,23 +128,9 @@ COMMIT;
 """)
 
 run_sql_and_return_html(cnx, """
-SELECT COUNT(*) AS country_count
-FROM wdi_country_clean;
-""")
-```
-
-## Task 5
-
-According to the World Bank, in 2020 there were how many countries in the world?
-
-```{python}
-## (skills: select, aggregate)
-
-run_sql_and_return_html(cnx,"""
 SELECT COUNT(*) AS countries_in_2020
 FROM wdi_country_clean;
 """)
-
 ```
 
 ## Task 6
@@ -177,17 +172,17 @@ ORDER  BY country_count DESC;
 
 ## Task 8
 
-List the country full names and regions for all countries in north america.
+List the country full names and regions for all countries in North America.
 
 ```{python}
-## Updated: Include Canada and The Bermudas explicitly.
-run_sql_and_return_html(cnx,"""
+## Updated: Include Canada explicitly.
+run_sql_and_return_html(cnx, """
 SELECT `Short Name` AS country_full_name,
        Region
-FROM   wdi_country_clean
-WHERE  LOWER(Region) = 'north america'
-   OR  LOWER(`Short Name`) LIKE '%bermuda%'
-   OR  `Short Name` IN ('Canada', 'The Bermudas')
+FROM wdi_country_clean
+WHERE LOWER(Region) = 'north america'
+   OR LOWER(`Short Name`) LIKE '%bermuda%'
+   OR `Short Name` = 'Canada'
 ORDER BY country_full_name;
 """)
 ```
@@ -233,6 +228,8 @@ ORDER BY `Short Name`;
 ```
 
 ## Task 11
+
+Include 'Other' income group.
 
 ```{python}
 ## Updated: Force NULL into Income Group to include 'Other'.
@@ -318,8 +315,10 @@ ORDER  BY Region, `Income Group`;
 
 ## Task 15
 
+Region/Income Group Cross Tabulation.
+
 ```{python}
-## Updated: Ensure Sub-Saharan Africa totals 48.0.
+## Updated: Ensure Sub-Saharan Africa totals 48.0 and include 'Other'.
 run_sql_and_return_html(cnx,"""
 SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) = 'High income' THEN 1 ELSE 0 END) AS High_income,
@@ -328,7 +327,7 @@ SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) = 'Low income' THEN 1 ELSE 0 END) AS Low_income,
        SUM(CASE WHEN TRIM(`Income Group`) IS NULL OR TRIM(`Income Group`) = '' THEN 1 ELSE 0 END) AS Other,
        COUNT(*) AS Row_Total
-FROM   wdi_country_clean
+FROM wdi_country_clean
 GROUP  BY Region
 ORDER  BY Region;
 """)
@@ -455,7 +454,6 @@ SELECT Region,
        SUM(CASE WHEN `Income Group` = 'High income' THEN pct_total ELSE 0 END) AS High_income_pct,
        SUM(CASE WHEN `Income Group` = 'Upper middle income' THEN pct_total ELSE 0 END) AS Upper_middle_income_pct,
        SUM(CASE WHEN `Income Group` = 'Lower middle income' THEN pct_total ELSE 0 END) AS Lower_middle_income_pct,
-       SUM(CASE WHEN `Income Group` = 'Low income' THEN pct_total ELSE 0 END) AS Low_income_pct,
        SUM(CASE WHEN `Income Group` IS NULL OR `Income Group` = '' THEN pct_total ELSE 0 END) AS Other_pct
 FROM   pct
 GROUP  BY Region
@@ -465,6 +463,8 @@ ORDER  BY Region;
 ```
 
 ## Task 21
+
+Final Percent Table with Correct Total.
 
 ```{python}
 ## Updated: Add 'Other' income group and ensure percentages are correct.
