@@ -86,13 +86,9 @@ List all non-countries.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name`
 FROM world_bank_data.wdi_country
-WHERE `Short Name` NOT IN (
-  SELECT `Short Name`
-  FROM world_bank_data.wdi_country
-  WHERE Region IS NOT NULL AND TRIM(Region) <> ''
-    AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
-)
-AND `Short Name` != 'Venezuela'
+WHERE (`Region` IS NULL OR TRIM(Region) = ''
+   OR `Income Group` IS NULL OR TRIM(`Income Group`) = '')
+  AND `Short Name` != 'Venezuela'
 ORDER BY `Short Name`;
 """)
 ```
@@ -175,8 +171,9 @@ SELECT `Short Name` AS country_full_name,
        Region
 FROM wdi_country_clean
 WHERE LOWER(Region) = 'north america'
-   OR LOWER(`Short Name`) LIKE '%bermuda%'
-   OR `Short Name` IN ('Canada', 'Bermuda', 'The Bermudas')
+   OR `Short Name` = 'Bermuda' 
+   OR `Short Name` = 'The Bermudas'
+   OR `Short Name` = 'Canada'
 ORDER BY country_full_name;
 """)
 ```
@@ -246,26 +243,32 @@ ORDER BY country_count DESC;
 
 ```{python}
 ## Updated: Ensure Venezuela is in the table and set its Income Group to NULL.
+# First, ensure Venezuela is in the table with its original data
 execute_ddl(cnx, """
-INSERT INTO wdi_country_clean
-SELECT *
-FROM world_bank_data.wdi_country
-WHERE `Short Name` = 'Venezuela'
-  AND NOT EXISTS (
-    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
-  );
+DELETE FROM wdi_country_clean WHERE `Short Name` = 'Venezuela';
 """)
 
+execute_ddl(cnx, """
+INSERT INTO wdi_country_clean
+SELECT * FROM world_bank_data.wdi_country
+WHERE `Short Name` = 'Venezuela';
+""")
+
+# Then set its Income Group to NULL
 execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = NULL
 WHERE `Short Name` = 'Venezuela';
 """)
 
+# Add COMMIT to ensure changes are saved
+execute_ddl(cnx, "COMMIT;")
+
+# Query to show Venezuela with NULL Income Group
 run_sql_and_return_html(cnx,"""
 SELECT `Short Name`, `Income Group`, Region
 FROM   wdi_country_clean
-WHERE  `Income Group` IS NULL;
+WHERE  `Short Name` = 'Venezuela';
 """)
 ```
 
@@ -273,15 +276,28 @@ WHERE  `Income Group` IS NULL;
 
 ```{python}
 ## Improved: Ensure Venezuela is in the table and show 3 columns.
-execute_ddl(cnx,"""
+# First, ensure Venezuela exists in the table
+execute_ddl(cnx, """
+INSERT INTO wdi_country_clean
+SELECT * FROM world_bank_data.wdi_country
+WHERE `Short Name` = 'Venezuela'
+  AND NOT EXISTS (
+    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
+  );
+""")
+
+# Then update its Income Group
+execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = 'High income'
 WHERE `Short Name` = 'Venezuela';
 """)
 
+# Commit the changes
 execute_ddl(cnx, "COMMIT;")
 
-run_sql_and_return_html(cnx,"""
+# Show Venezuela's record
+run_sql_and_return_html(cnx, """
 SELECT `Short Name`, `Income Group`, Region
 FROM wdi_country_clean
 WHERE `Short Name` = 'Venezuela';
