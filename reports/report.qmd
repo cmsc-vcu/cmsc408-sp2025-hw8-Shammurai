@@ -114,8 +114,7 @@ WHERE Region IS NOT NULL AND TRIM(Region) <> ''
 
 execute_ddl(cnx, """
 INSERT INTO wdi_country_clean
-SELECT *
-FROM world_bank_data.wdi_country
+SELECT * FROM world_bank_data.wdi_country
 WHERE `Short Name` = 'Venezuela'
   AND NOT EXISTS (
     SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
@@ -177,7 +176,7 @@ SELECT `Short Name` AS country_full_name,
 FROM wdi_country_clean
 WHERE LOWER(Region) = 'north america'
    OR LOWER(`Short Name`) LIKE '%%bermuda%%'
-   OR `Short Name` = 'Canada'
+   OR `Short Name` IN ('Canada', 'The Bermudas')
 ORDER BY country_full_name;
 """)
 ```
