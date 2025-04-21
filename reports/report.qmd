@@ -82,11 +82,12 @@ limit 5
 List all non-countries.
 
 ```{python}
-## Improved: Dynamically identify non-countries by missing Region.
+## Improved: Dynamically identify non-countries by missing Region or Income Group.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name`
 FROM world_bank_data.wdi_country
 WHERE Region IS NULL OR TRIM(Region) = ''
+   OR `Income Group` IS NULL OR TRIM(`Income Group`) = ''
 ORDER BY `Short Name`;
 """)
 ```
@@ -108,7 +109,8 @@ DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
 SELECT *
 FROM world_bank_data.wdi_country
-WHERE Region IS NOT NULL AND TRIM(Region) <> '';
+WHERE Region IS NOT NULL AND TRIM(Region) <> ''
+  AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> '';
 """)
 
 execute_ddl(cnx,"""
@@ -180,7 +182,7 @@ ORDER  BY country_count DESC;
 List the country full names and regions for all countries in north america.
 
 ```{python}
-## Improved: Include Bermuda and case-insensitive region match.
+## Improved: Include Bermuda and The Bermudas (case-insensitive).
 run_sql_and_return_html(cnx,"""
 SELECT `Short Name` AS country_full_name,
        Region
