@@ -108,19 +108,7 @@ DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
 SELECT *
 FROM world_bank_data.wdi_country
-WHERE Region IS NOT NULL AND TRIM(Region) <> ''
-  AND `Short Name` NOT IN (
-    'Africa Eastern and Southern', 'Africa Western and Central', 'Arab World', 'Caribbean small states',
-    'Central Europe and the Baltics', 'Early-demographic dividend', 'East Asia & Pacific', 'East Asia & Pacific (excluding high income)',
-    'Euro area', 'Europe & Central Asia', 'Europe & Central Asia (excluding high income)', 'European Union',
-    'Fragile and conflict affected situations', 'Heavily indebted poor countries (HIPC)', 'High income', 'IBRD only',
-    'IDA & IBRD total', 'IDA blend', 'IDA only', 'IDA total', 'Late-demographic dividend', 'Latin America & Caribbean',
-    'Latin America & Caribbean (excluding high income)', 'Least developed countries: UN classification', 'Low & middle income',
-    'Low income', 'Lower middle income', 'Middle East & North Africa', 'Middle East & North Africa (excluding high income)',
-    'Middle income', 'North America', 'OECD members', 'Other small states', 'Pacific island small states', 'Post-demographic dividend',
-    'Pre-demographic dividend', 'Small states', 'South Asia', 'South Asia (excluding high income)', 'Sub-Saharan Africa',
-    'Sub-Saharan Africa (excluding high income)', 'Upper middle income', 'World'
-  );
+WHERE Region IS NOT NULL AND TRIM(Region) <> '';
 """)
 
 execute_ddl(cnx,"""
@@ -201,7 +189,6 @@ WHERE  LOWER(Region) = 'north america'
    OR  LOWER(`Short Name`) LIKE '%bermuda%'
 ORDER BY country_full_name;
 """)
-
 ```
 
 ## Task 9
@@ -255,7 +242,6 @@ FROM   wdi_country_clean
 GROUP  BY IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other')
 ORDER  BY country_count DESC;
 """)
-
 ```
 
 ## Task 12
@@ -274,7 +260,6 @@ FROM   wdi_country_clean
 WHERE  `Income Group` IS NULL
 ORDER  BY `Short Name`;
 """)
-
 ```
 
 ## Task 13
@@ -294,7 +279,6 @@ SELECT `Short Name`, `Income Group`, Region
 FROM wdi_country_clean
 WHERE `Short Name` = 'Venezuela';
 """)
-
 ```
 
 ## Task 14
@@ -332,7 +316,6 @@ FROM   wdi_country_clean
 GROUP  BY Region
 ORDER  BY Region;
 """)
-
 ```
 
 ## Task 16
@@ -409,7 +392,6 @@ LEFT JOIN wdi_country_clean w
 WHERE w.Region IS NULL
 ORDER BY p.Region, p.`Income Group`;
 """)
-
 ```
 
 ## Task 19
@@ -493,7 +475,6 @@ FROM wdi_country_clean
 GROUP BY `Income Group`
 ORDER BY country_count DESC;
 """)
-
 ```
 
 
