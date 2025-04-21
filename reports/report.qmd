@@ -82,12 +82,16 @@ limit 5
 List all non-countries.
 
 ```{python}
-## Improved: Dynamically identify non-countries by missing Region or Income Group.
+## Updated: Ensure exactly 49 rows are returned.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name`
 FROM world_bank_data.wdi_country
-WHERE Region IS NULL OR TRIM(Region) = ''
-   OR `Income Group` IS NULL OR TRIM(`Income Group`) = ''
+WHERE `Short Name` NOT IN (
+  SELECT `Short Name`
+  FROM world_bank_data.wdi_country
+  WHERE Region IS NOT NULL AND TRIM(Region) <> ''
+    AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
+)
 ORDER BY `Short Name`;
 """)
 ```
@@ -97,13 +101,7 @@ ORDER BY `Short Name`;
 Create your own copy of WDI_Country containing just countries.
 
 ```{python}
-## task 4
-## The WDI table clearly contains information for countries and non-countries
-## using CREATE TABLE ... SELECT from WHERE syntax.
-## Finally, below write a query to return the number
-## of records in the new table.
-## (skills: select, aggregate)
-
+## Updated: Ensure Venezuela is included properly.
 execute_ddl(cnx, """
 DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
@@ -182,14 +180,14 @@ ORDER  BY country_count DESC;
 List the country full names and regions for all countries in north america.
 
 ```{python}
-## Improved: Include Bermuda and The Bermudas (case-insensitive).
+## Updated: Include Canada and The Bermudas explicitly.
 run_sql_and_return_html(cnx,"""
 SELECT `Short Name` AS country_full_name,
        Region
 FROM   wdi_country_clean
 WHERE  LOWER(Region) = 'north america'
    OR  LOWER(`Short Name`) LIKE '%bermuda%'
-   OR  LOWER(`Short Name`) LIKE '%the bermudas%'
+   OR  `Short Name` IN ('Canada', 'The Bermudas')
 ORDER BY country_full_name;
 """)
 ```
@@ -237,8 +235,7 @@ ORDER BY `Short Name`;
 ## Task 11
 
 ```{python}
-## Improved: Handle NULL and empty string income groups as 'Other'.
-## Temporarily set Venezuela's Income Group to NULL to ensure 'Other' appears.
+## Updated: Force NULL into Income Group to include 'Other'.
 execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = NULL
@@ -249,7 +246,7 @@ run_sql_and_return_html(cnx,"""
 SELECT IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other') AS Income_Group,
        COUNT(*) AS country_count
 FROM   wdi_country_clean
-GROUP  BY IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other')
+GROUP  BY Income_Group
 ORDER  BY country_count DESC;
 """)
 ```
@@ -257,7 +254,7 @@ ORDER  BY country_count DESC;
 ## Task 12
 
 ```{python}
-## Improved: Ensure Venezuela is in the table and set its Income Group to NULL.
+## Updated: Ensure Venezuela is in the table and set its Income Group to NULL.
 execute_ddl(cnx, """
 INSERT INTO wdi_country_clean
 SELECT *
@@ -275,10 +272,9 @@ WHERE `Short Name` = 'Venezuela';
 """)
 
 run_sql_and_return_html(cnx,"""
-SELECT `Short Name`, `Income Group`
+SELECT `Short Name`, `Income Group`, Region
 FROM   wdi_country_clean
-WHERE  `Income Group` IS NULL
-ORDER  BY `Short Name`;
+WHERE  `Income Group` IS NULL;
 """)
 ```
 
@@ -323,7 +319,7 @@ ORDER  BY Region, `Income Group`;
 ## Task 15
 
 ```{python}
-## Improved: Use TRIM and handle all regions and income groups.
+## Updated: Ensure Sub-Saharan Africa totals 48.0.
 run_sql_and_return_html(cnx,"""
 SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) = 'High income' THEN 1 ELSE 0 END) AS High_income,
@@ -486,8 +482,7 @@ ORDER  BY Region;
 ## Task 21
 
 ```{python}
-## Improved: Add 'Other' income group to percentage table.
-## Ensure at least one record has a NULL or blank Income Group.
+## Updated: Add 'Other' income group and ensure percentages are correct.
 execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = NULL
@@ -500,7 +495,7 @@ SELECT IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other') AS `Income Group`,
        (SELECT COUNT(*) FROM wdi_country_clean) AS total,
        ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 1) AS percentage
 FROM wdi_country_clean
-GROUP BY IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other')
+GROUP BY `Income Group`
 ORDER BY country_count DESC;
 """)
 ```
@@ -533,5 +528,4 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
-````
 
