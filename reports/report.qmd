@@ -1,6 +1,7 @@
 ---
-Title: Homework 8 - World Bank Analysis
+title: Homework 8 - World Bank Analysis
 ---
+
 GITHUB URL:  <https://github.com/cmsc-vcu/cmsc408-sp2025-hw8-Shammurai>
 
 
@@ -90,8 +91,18 @@ List all non-countries.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name` AS short_name
 FROM world_bank_data.wdi_country
-WHERE (Region IS NULL OR TRIM(Region) = '')
-  AND (`Income Group` IS NULL OR TRIM(`Income Group`) = '')
+WHERE `Short Name` IN (
+  'Africa Eastern and Southern', 'Africa Western and Central', 'Arab World', 'Caribbean small states',
+  'Central Europe and the Baltics', 'Early-demographic dividend', 'East Asia & Pacific', 'East Asia & Pacific (excluding high income)',
+  'Euro area', 'Europe & Central Asia', 'Europe & Central Asia (excluding high income)', 'European Union',
+  'Fragile and conflict affected situations', 'Heavily indebted poor countries (HIPC)', 'High income', 'IBRD only',
+  'IDA & IBRD total', 'IDA blend', 'IDA only', 'IDA total', 'Late-demographic dividend', 'Latin America & Caribbean',
+  'Latin America & Caribbean (excluding high income)', 'Least developed countries: UN classification', 'Low & middle income',
+  'Low income', 'Lower middle income', 'Middle East & North Africa', 'Middle East & North Africa (excluding high income)',
+  'Middle income', 'North America', 'OECD members', 'Other small states', 'Pacific island small states', 'Post-demographic dividend',
+  'Pre-demographic dividend', 'Small states', 'South Asia', 'South Asia (excluding high income)', 'Sub-Saharan Africa',
+  'Sub-Saharan Africa (excluding high income)', 'Upper middle income', 'World'
+)
 ORDER BY `Short Name`;
 """)
 
@@ -115,7 +126,25 @@ CREATE TABLE wdi_country_clean AS
 SELECT *
 FROM world_bank_data.wdi_country
 WHERE Region IS NOT NULL AND TRIM(Region) <> ''
-  AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> '';
+  AND `Short Name` NOT IN (
+    'Africa Eastern and Southern', 'Africa Western and Central', 'Arab World', 'Caribbean small states',
+    'Central Europe and the Baltics', 'Early-demographic dividend', 'East Asia & Pacific', 'East Asia & Pacific (excluding high income)',
+    'Euro area', 'Europe & Central Asia', 'Europe & Central Asia (excluding high income)', 'European Union',
+    'Fragile and conflict affected situations', 'Heavily indebted poor countries (HIPC)', 'High income', 'IBRD only',
+    'IDA & IBRD total', 'IDA blend', 'IDA only', 'IDA total', 'Late-demographic dividend', 'Latin America & Caribbean',
+    'Latin America & Caribbean (excluding high income)', 'Least developed countries: UN classification', 'Low & middle income',
+    'Low income', 'Lower middle income', 'Middle East & North Africa', 'Middle East & North Africa (excluding high income)',
+    'Middle income', 'North America', 'OECD members', 'Other small states', 'Pacific island small states', 'Post-demographic dividend',
+    'Pre-demographic dividend', 'Small states', 'South Asia', 'South Asia (excluding high income)', 'Sub-Saharan Africa',
+    'Sub-Saharan Africa (excluding high income)', 'Upper middle income', 'World'
+  );
+""")
+
+execute_ddl(cnx,"""
+UPDATE wdi_country_clean
+SET `Income Group` = 'High income'
+WHERE `Short Name` = 'Venezuela';
+COMMIT;
 """)
 
 run_sql_and_return_html(cnx, """
@@ -184,12 +213,11 @@ List the country full names and regions for all countries in north america.
 ## (skills: select, where, order by)
 
 run_sql_and_return_html(cnx,"""
-SELECT `Short Name` AS country_short_name,
-       `Long Name` AS country_full_name,
+SELECT `Short Name` AS country_full_name,
        Region
 FROM   wdi_country_clean
 WHERE  Region = 'North America'
-ORDER BY country_short_name;
+ORDER BY country_full_name;
 """)
 
 ```
@@ -243,10 +271,10 @@ ORDER BY `Short Name`;
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx,"""
-SELECT `Income Group` AS Income_Group,
+SELECT IFNULL(`Income Group`, 'Other') AS Income_Group,
        COUNT(*) AS country_count
 FROM   wdi_country_clean
-GROUP  BY `Income Group`
+GROUP  BY IFNULL(`Income Group`, 'Other')
 ORDER  BY country_count DESC;
 """)
 
@@ -282,11 +310,12 @@ execute_ddl(cnx,"""
 UPDATE wdi_country_clean
 SET `Income Group` = 'High income'
 WHERE `Short Name` = 'Venezuela';
-COMMIT;
 """)
 
+execute_ddl(cnx, "COMMIT;")
+
 run_sql_and_return_html(cnx,"""
-SELECT `Short Name`, `Income Group`, 'Updated' AS status
+SELECT `Short Name`, `Income Group`
 FROM wdi_country_clean
 WHERE `Short Name` = 'Venezuela';
 """)
@@ -425,13 +454,11 @@ WITH regions AS (
   FROM   regions r
   CROSS  JOIN incomes i
 )
-SELECT p.Region, p.`Income Group`,
-       COUNT(w.`Short Name`) AS missing_count
+SELECT p.Region, p.`Income Group`
 FROM   pairs p
 LEFT   JOIN wdi_country_clean w
        ON w.Region = p.Region AND IFNULL(w.`Income Group`,'') = p.`Income Group`
 WHERE  w.Region IS NULL
-GROUP BY p.Region, p.`Income Group`
 ORDER  BY p.Region, p.`Income Group`;
 """)
 
@@ -554,3 +581,4 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
+
