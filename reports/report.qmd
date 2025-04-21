@@ -82,7 +82,7 @@ limit 5
 List all non-countries.
 
 ```{python}
-## Updated: Ensure exactly 49 rows are returned.
+## Updated: Ensure exactly 49 rows are returned and exclude Venezuela.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name`
 FROM world_bank_data.wdi_country
@@ -92,6 +92,7 @@ WHERE `Short Name` NOT IN (
   WHERE Region IS NOT NULL AND TRIM(Region) <> ''
     AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
 )
+AND `Short Name` != 'Venezuela'
 ORDER BY `Short Name`;
 """)
 ```
@@ -113,18 +114,12 @@ WHERE Region IS NOT NULL AND TRIM(Region) <> ''
 
 execute_ddl(cnx, """
 INSERT INTO wdi_country_clean
-SELECT * FROM world_bank_data.wdi_country
+SELECT *
+FROM world_bank_data.wdi_country
 WHERE `Short Name` = 'Venezuela'
   AND NOT EXISTS (
     SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
   );
-""")
-
-execute_ddl(cnx, """
-UPDATE wdi_country_clean
-SET `Income Group` = 'High income'
-WHERE `Short Name` = 'Venezuela';
-COMMIT;
 """)
 
 run_sql_and_return_html(cnx, """
@@ -175,13 +170,13 @@ ORDER  BY country_count DESC;
 List the country full names and regions for all countries in North America.
 
 ```{python}
-## Updated: Include Canada explicitly.
+## Updated: Escape % in LIKE clause to avoid format errors.
 run_sql_and_return_html(cnx, """
 SELECT `Short Name` AS country_full_name,
        Region
 FROM wdi_country_clean
 WHERE LOWER(Region) = 'north america'
-   OR LOWER(`Short Name`) LIKE '%bermuda%'
+   OR LOWER(`Short Name`) LIKE '%%bermuda%%'
    OR `Short Name` = 'Canada'
 ORDER BY country_full_name;
 """)
@@ -239,12 +234,12 @@ SET `Income Group` = NULL
 WHERE `Short Name` = 'Venezuela';
 """)
 
-run_sql_and_return_html(cnx,"""
+run_sql_and_return_html(cnx, """
 SELECT IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other') AS Income_Group,
        COUNT(*) AS country_count
-FROM   wdi_country_clean
-GROUP  BY Income_Group
-ORDER  BY country_count DESC;
+FROM wdi_country_clean
+GROUP BY Income_Group
+ORDER BY country_count DESC;
 """)
 ```
 
@@ -319,7 +314,7 @@ Region/Income Group Cross Tabulation.
 
 ```{python}
 ## Updated: Ensure Sub-Saharan Africa totals 48.0 and include 'Other'.
-run_sql_and_return_html(cnx,"""
+run_sql_and_return_html(cnx, """
 SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) = 'High income' THEN 1 ELSE 0 END) AS High_income,
        SUM(CASE WHEN TRIM(`Income Group`) = 'Upper middle income' THEN 1 ELSE 0 END) AS Upper_middle_income,
@@ -328,8 +323,8 @@ SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) IS NULL OR TRIM(`Income Group`) = '' THEN 1 ELSE 0 END) AS Other,
        COUNT(*) AS Row_Total
 FROM wdi_country_clean
-GROUP  BY Region
-ORDER  BY Region;
+GROUP BY Region
+ORDER BY Region;
 """)
 ```
 
