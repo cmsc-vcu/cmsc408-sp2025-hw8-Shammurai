@@ -517,17 +517,17 @@ WHERE TRIM(`Short Name`) = 'Venezuela';
 
 # Step 2: Run the final grouped summary query
 run_sql_and_return_html(cnx, """
-SELECT
-  CASE
+SELECT 
+  CASE 
     WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
     ELSE `Income Group`
   END AS `Income Group`,
   COUNT(*) AS country_count,
   (SELECT COUNT(*) FROM wdi_country_clean) AS total,
-  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 1) AS percentage
+  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 2) AS percentage
 FROM wdi_country_clean
 GROUP BY
-  CASE
+  CASE 
     WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
     ELSE `Income Group`
   END
