@@ -422,12 +422,9 @@ WITH regions AS (
   SELECT DISTINCT Region FROM wdi_country_clean
 ),
 income_groups AS (
-  SELECT DISTINCT
-    CASE 
-      WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
-      ELSE `Income Group`
-    END AS `Income Group`
+  SELECT DISTINCT `Income Group`
   FROM wdi_country_clean
+  WHERE `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
 ),
 all_combos AS (
   SELECT r.Region, i.`Income Group`
@@ -435,13 +432,9 @@ all_combos AS (
   CROSS JOIN income_groups i
 ),
 existing_combos AS (
-  SELECT DISTINCT
-    Region,
-    CASE 
-      WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
-      ELSE `Income Group`
-    END AS `Income Group`
+  SELECT DISTINCT Region, `Income Group`
   FROM wdi_country_clean
+  WHERE `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
 )
 SELECT Region, `Income Group`, 'Missing' AS status
 FROM all_combos
@@ -577,5 +570,5 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
-```````````````````
+````````````````````
 
