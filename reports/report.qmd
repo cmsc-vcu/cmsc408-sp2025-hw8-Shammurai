@@ -325,13 +325,15 @@ WHERE `Short Name` = 'Venezuela';
 ## (skills: select, aggregate, group by, order by)
 
 run_sql_and_return_html(cnx, """
-SELECT DISTINCT
+SELECT 
   Region,
   CASE 
     WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
     ELSE `Income Group`
-  END AS `Income Group`
+  END AS `Income Group`,
+  COUNT(*) AS no_of_countries
 FROM wdi_country_clean
+GROUP BY Region, `Income Group`
 ORDER BY Region, `Income Group`;
 """)
 
