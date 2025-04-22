@@ -104,8 +104,7 @@ DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
 SELECT *
 FROM world_bank_data.wdi_country
-WHERE Region IS NOT NULL AND TRIM(Region) <> ''
-  AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> '';
+WHERE Region IS NOT NULL AND TRIM(Region) <> '';
 """)
 
 # Verify table creation and show sample
@@ -118,8 +117,6 @@ WHERE table_name = 'wdi_country_clean';
 
 ## Task 5
 
-How many countries are in the clean table?
-
 ```{python}
 # First count current records
 run_sql_and_return_html(cnx, """
@@ -127,14 +124,14 @@ SELECT COUNT(*) AS initial_count
 FROM wdi_country_clean;
 """)
 
-# Add Venezuela if not present
+# Force insert Venezuela if not already present
 execute_ddl(cnx, """
+DELETE FROM wdi_country_clean 
+WHERE TRIM(`Short Name`) = 'Venezuela';
+
 INSERT INTO wdi_country_clean
 SELECT * FROM world_bank_data.wdi_country
-WHERE `Short Name` = 'Venezuela'
-  AND NOT EXISTS (
-    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
-  );
+WHERE TRIM(`Short Name`) = 'Venezuela';
 """)
 
 # Show final count after Venezuela addition
@@ -242,34 +239,14 @@ ORDER BY `Short Name`;
 ## Task 11
 
 ```{python}
-# First ensure Venezuela is in the clean table
-execute_ddl(cnx, """
-INSERT INTO wdi_country_clean
-SELECT * FROM world_bank_data.wdi_country
-WHERE `Short Name` = 'Venezuela'
-  AND NOT EXISTS (
-    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
-  );
-""")
-
-# Set Venezuela's Income Group to NULL
-execute_ddl(cnx, """
-UPDATE wdi_country_clean
-SET `Income Group` = NULL
-WHERE `Short Name` = 'Venezuela';
-""")
-
-# Commit changes
-execute_ddl(cnx, "COMMIT;")
-
 # Count countries by Income Group with normalized categories
 run_sql_and_return_html(cnx, """
 SELECT 
-    CASE
-        WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
-        ELSE `Income Group`
-    END AS Income_Group,
-    COUNT(*) AS country_count
+  CASE 
+    WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
+    ELSE `Income Group`
+  END AS Income_Group,
+  COUNT(*) AS country_count
 FROM wdi_country_clean
 GROUP BY Income_Group
 ORDER BY country_count DESC;
@@ -362,10 +339,7 @@ ORDER  BY Region, `Income Group`;
 
 ## Task 15
 
-Region/Income Group Cross Tabulation.
-
 ```{python}
-## Updated: Ensure Sub-Saharan Africa totals 48.0 and include 'Other'.
 run_sql_and_return_html(cnx, """
 SELECT Region,
        SUM(CASE WHEN TRIM(`Income Group`) = 'High income' THEN 1 ELSE 0 END) AS High_income,
@@ -510,8 +484,6 @@ ORDER  BY Region;
 
 ## Task 21
 
-Fix Task 21: Ensure Venezuela is included and grouped correctly.
-
 ```{python}
 # Debug Step: Confirm Venezuela is present with NULL
 run_sql_and_return_html(cnx, """
@@ -520,25 +492,21 @@ FROM wdi_country_clean
 WHERE `Short Name` = 'Venezuela';
 """)
 
-# Step 1: Reinsert Venezuela and set Income Group to NULL
+# Reinsert Venezuela and set Income Group to NULL
 execute_ddl(cnx, """
 DELETE FROM wdi_country_clean 
 WHERE TRIM(`Short Name`) = 'Venezuela';
-""")
 
-execute_ddl(cnx, """
 INSERT INTO wdi_country_clean
 SELECT * FROM world_bank_data.wdi_country
 WHERE TRIM(`Short Name`) = 'Venezuela';
-""")
 
-execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = NULL
 WHERE TRIM(`Short Name`) = 'Venezuela';
 """)
 
-# Step 2: Run the final grouped summary query
+# Run the final grouped summary query
 run_sql_and_return_html(cnx, """
 SELECT
   CASE
@@ -586,5 +554,5 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
-```````````
+````````````````
 
