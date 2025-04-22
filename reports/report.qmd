@@ -444,14 +444,13 @@ existing_combos AS (
     END AS `Income Group`
   FROM wdi_country_clean
 )
-SELECT *
+SELECT Region, `Income Group`
 FROM all_combos
 WHERE (Region, `Income Group`) NOT IN (
   SELECT Region, `Income Group` FROM existing_combos
 )
 ORDER BY Region, `Income Group`;
 """)
-
 ```
 
 ## Task 19
@@ -468,6 +467,7 @@ SELECT
   COUNT(*) AS country_count,
   ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 2) AS percentage
 FROM wdi_country_clean
+WHERE Region IS NOT NULL
 GROUP BY Region, `Income Group`
 ORDER BY Region, `Income Group`;
 """)
@@ -579,5 +579,5 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
-``````````````
+````````````````
 
