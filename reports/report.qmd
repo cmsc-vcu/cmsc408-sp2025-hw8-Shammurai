@@ -93,12 +93,12 @@ ORDER BY `Short Name`;
 """)
 ```
 
-## Task 4 & Task 5
+## Task 4
 
-Create your own copy of WDI_Country containing just countries and ensure Venezuela is included.
+Create clean copy of country table excluding non-countries.
 
 ```{python}
-## Updated: Ensure Venezuela is included properly and country count is 217.
+# Create clean copy of country table excluding non-countries
 execute_ddl(cnx, """
 DROP TABLE IF EXISTS wdi_country_clean;
 CREATE TABLE wdi_country_clean AS
@@ -108,6 +108,26 @@ WHERE Region IS NOT NULL AND TRIM(Region) <> ''
   AND `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> '';
 """)
 
+# Verify table creation and show sample
+run_sql_and_return_html(cnx, """
+SELECT COUNT(*) AS table_exists 
+FROM information_schema.tables 
+WHERE table_name = 'wdi_country_clean';
+""")
+```
+
+## Task 5
+
+How many countries are in the clean table?
+
+```{python}
+# First count current records
+run_sql_and_return_html(cnx, """
+SELECT COUNT(*) AS initial_count
+FROM wdi_country_clean;
+""")
+
+# Add Venezuela if not present
 execute_ddl(cnx, """
 INSERT INTO wdi_country_clean
 SELECT * FROM world_bank_data.wdi_country
@@ -117,8 +137,9 @@ WHERE `Short Name` = 'Venezuela'
   );
 """)
 
+# Show final count after Venezuela addition
 run_sql_and_return_html(cnx, """
-SELECT COUNT(*) AS countries_in_2020
+SELECT COUNT(*) AS final_count
 FROM wdi_country_clean;
 """)
 ```
@@ -220,19 +241,35 @@ ORDER BY `Short Name`;
 
 ## Task 11
 
-Include 'Other' income group.
-
 ```{python}
-## Updated: Force NULL into Income Group to include 'Other'.
+# First ensure Venezuela is in the clean table
+execute_ddl(cnx, """
+INSERT INTO wdi_country_clean
+SELECT * FROM world_bank_data.wdi_country
+WHERE `Short Name` = 'Venezuela'
+  AND NOT EXISTS (
+    SELECT 1 FROM wdi_country_clean WHERE `Short Name` = 'Venezuela'
+  );
+""")
+
+# Set Venezuela's Income Group to NULL
 execute_ddl(cnx, """
 UPDATE wdi_country_clean
 SET `Income Group` = NULL
 WHERE `Short Name` = 'Venezuela';
 """)
 
+# Commit changes
+execute_ddl(cnx, "COMMIT;")
+
+# Count countries by Income Group with normalized categories
 run_sql_and_return_html(cnx, """
-SELECT IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other') AS Income_Group,
-       COUNT(*) AS country_count
+SELECT 
+    CASE
+        WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
+        ELSE `Income Group`
+    END AS Income_Group,
+    COUNT(*) AS country_count
 FROM wdi_country_clean
 GROUP BY Income_Group
 ORDER BY country_count DESC;
@@ -473,23 +510,50 @@ ORDER  BY Region;
 
 ## Task 21
 
-Final Percent Table with Correct Total.
+Fix Task 21: Ensure Venezuela is included and grouped correctly.
 
 ```{python}
-## Updated: Add 'Other' income group and ensure percentages are correct.
-execute_ddl(cnx, """
-UPDATE wdi_country_clean
-SET `Income Group` = NULL
+# Debug Step: Confirm Venezuela is present with NULL
+run_sql_and_return_html(cnx, """
+SELECT `Short Name`, `Income Group`
+FROM wdi_country_clean
 WHERE `Short Name` = 'Venezuela';
 """)
 
-run_sql_and_return_html(cnx,"""
-SELECT IFNULL(NULLIF(TRIM(`Income Group`), ''), 'Other') AS `Income Group`,
-       COUNT(*) AS country_count,
-       (SELECT COUNT(*) FROM wdi_country_clean) AS total,
-       ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 1) AS percentage
+# Step 1: Reinsert Venezuela and set Income Group to NULL
+execute_ddl(cnx, """
+DELETE FROM wdi_country_clean 
+WHERE TRIM(`Short Name`) = 'Venezuela';
+""")
+
+execute_ddl(cnx, """
+INSERT INTO wdi_country_clean
+SELECT * FROM world_bank_data.wdi_country
+WHERE TRIM(`Short Name`) = 'Venezuela';
+""")
+
+execute_ddl(cnx, """
+UPDATE wdi_country_clean
+SET `Income Group` = NULL
+WHERE TRIM(`Short Name`) = 'Venezuela';
+""")
+
+# Step 2: Run the final grouped summary query
+run_sql_and_return_html(cnx, """
+SELECT
+  CASE
+    WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
+    ELSE `Income Group`
+  END AS `Income Group`,
+  COUNT(*) AS country_count,
+  (SELECT COUNT(*) FROM wdi_country_clean) AS total,
+  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 1) AS percentage
 FROM wdi_country_clean
-GROUP BY `Income Group`
+GROUP BY
+  CASE
+    WHEN TRIM(`Income Group`) = '' OR `Income Group` IS NULL THEN 'Other'
+    ELSE `Income Group`
+  END
 ORDER BY country_count DESC;
 """)
 ```
@@ -522,4 +586,5 @@ focused on the root *README.md*.
 ::: {style="background:lightgray; margin-left:20px; border-top: 3px solid black; border-bottom: 3px solid black; padding-left:20px; padding-right:20px"}
 {{< include ../README.md >}}
 :::
+```````````
 
