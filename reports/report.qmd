@@ -333,6 +333,7 @@ SELECT
   END AS `Income Group`,
   COUNT(*) AS no_of_countries
 FROM wdi_country_clean
+WHERE Region IS NOT NULL
 GROUP BY Region, `Income Group`
 ORDER BY Region, `Income Group`;
 """)
@@ -417,48 +418,61 @@ ORDER  BY `Short Name`;
 
 ```{python}
 ## Improved: Add a dummy third column to match expected schema.
-run_sql_and_return_html(cnx,"""
+run_sql_and_return_html(cnx, """
 WITH regions AS (
   SELECT DISTINCT Region FROM wdi_country_clean
-), incomes AS (
-  SELECT DISTINCT TRIM(`Income Group`) AS `Income Group` FROM wdi_country_clean
-), pairs AS (
+),
+income_groups AS (
+  SELECT DISTINCT
+    CASE 
+      WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
+      ELSE `Income Group`
+    END AS `Income Group`
+  FROM wdi_country_clean
+),
+all_combos AS (
   SELECT r.Region, i.`Income Group`
-  FROM regions r CROSS JOIN incomes i
+  FROM regions r
+  CROSS JOIN income_groups i
+),
+existing_combos AS (
+  SELECT DISTINCT
+    Region,
+    CASE 
+      WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
+      ELSE `Income Group`
+    END AS `Income Group`
+  FROM wdi_country_clean
 )
-SELECT p.Region, p.`Income Group`, 'Missing' AS Status
-FROM pairs p
-LEFT JOIN wdi_country_clean w
-  ON w.Region = p.Region AND TRIM(w.`Income Group`) = p.`Income Group`
-WHERE w.Region IS NULL
-ORDER BY p.Region, p.`Income Group`;
+SELECT *
+FROM all_combos
+WHERE (Region, `Income Group`) NOT IN (
+  SELECT Region, `Income Group` FROM existing_combos
+)
+ORDER BY Region, `Income Group`;
 """)
+
 ```
 
 ## Task 19
 
 ```{python}
 ## Updated: Ensure total count is 217 in the percentage table.
-run_sql_and_return_html(cnx,"""
-WITH base AS (
-  SELECT Region,
-         IFNULL(`Income Group`,'') AS `Income Group`, COUNT(*) AS country_cnt
-  FROM   wdi_country_clean
-  GROUP  BY Region, `Income Group`
-), totals AS (
-  SELECT SUM(country_cnt) AS grand_total FROM base
-), region_tot AS (
-  SELECT Region, SUM(country_cnt) AS region_total FROM base GROUP BY Region
-), income_tot AS (
-  SELECT `Income Group`, SUM(country_cnt) AS income_total FROM base GROUP BY `Income Group`
-)
-SELECT b.Region, b.`Income Group`, b.country_cnt, r.region_total, i.income_total, t.grand_total,
-ROUND(b.country_cnt * 100.0 / t.grand_total, 2) AS pct_of_total
-FROM base b
-JOIN region_tot r USING (Region)
-JOIN income_tot i USING (`Income Group`)
-JOIN totals t;
+run_sql_and_return_html(cnx, """
+SELECT
+  Region,
+  CASE 
+    WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
+    ELSE `Income Group`
+  END AS `Income Group`,
+  COUNT(*) AS country_count,
+  ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 2) AS percentage
+FROM wdi_country_clean
+GROUP BY Region, `Income Group`
+ORDER BY Region, `Income Group`;
 """)
+
+
 ```
 
 ## Task 20
