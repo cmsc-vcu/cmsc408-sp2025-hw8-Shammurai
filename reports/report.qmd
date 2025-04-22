@@ -448,13 +448,11 @@ ORDER BY Region, `Income Group`;
 run_sql_and_return_html(cnx, """
 SELECT 
   Region,
-  CASE 
-    WHEN `Income Group` IS NULL OR TRIM(`Income Group`) = '' THEN 'Other'
-    ELSE `Income Group`
-  END AS `Income Group`,
+  `Income Group`,
   COUNT(*) AS country_count,
   ROUND(COUNT(*) * 100.0 / (SELECT COUNT(*) FROM wdi_country_clean), 2) AS percentage
 FROM wdi_country_clean
+WHERE `Income Group` IS NOT NULL AND TRIM(`Income Group`) <> ''
 GROUP BY Region, `Income Group`
 ORDER BY Region, `Income Group`;
 """)
